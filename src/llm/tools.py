@@ -147,8 +147,7 @@ def search_indicators(query: str = "", limit: int = 25) -> Dict[str, Any]:
     # Actualizar cache con resultados
     from ..data.ids_cache import get_cache
     cache = get_cache()
-    if not cache.is_loaded():
-        cache.load(results)
+    # El cache TSV es inmutable, no lo sobrescribimos con resultados parciales
     
     return {
         "count": len(results),

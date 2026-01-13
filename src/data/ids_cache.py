@@ -31,17 +31,40 @@ class IndicatorCache:
         self._indicators: Dict[str, IndicatorInfo] = {}
         self._codes: Set[str] = set()
         self._loaded = False
+        self._from_tsv = False  # Si cargó desde TSV, es inmutable
         self._lock = threading.Lock()
     
-    def load(self, indicators: List[Dict]) -> None:
+    @staticmethod
+    def normalize_code(code: str) -> str:
+        """Normaliza un código de indicador.
+        
+        Quita tildes, convierte a mayúsculas.
+        POBLACIÓN → POBLACION
+        """
+        import unicodedata
+        
+        # Quitar tildes
+        normalized = unicodedata.normalize('NFD', code)
+        normalized = ''.join(c for c in normalized if unicodedata.category(c) != 'Mn')
+        
+        return normalized.upper().strip()
+    
+    def load(self, indicators: List[Dict], from_tsv: bool = False) -> None:
         """Carga indicadores en el cache.
         
         Args:
             indicators: Lista de indicadores con 'code', 'title', 'subject'
+            from_tsv: Si True, marca como carga desde TSV (inmutable)
         """
         with self._lock:
+            # Si ya cargamos desde TSV, no sobrescribir
+            if self._from_tsv and not from_tsv:
+                logger.debug("Cache ya cargado desde TSV, ignorando carga parcial")
+                return
+            
             for ind in indicators:
-                code = ind.get("code", "").upper()
+                code_raw = ind.get("code", "")
+                code = self.normalize_code(code_raw)
                 if code:
                     self._indicators[code] = IndicatorInfo(
                         code=code,
@@ -49,7 +72,10 @@ class IndicatorCache:
                         subject=ind.get("subject", "")
                     )
                     self._codes.add(code)
+            
             self._loaded = True
+            if from_tsv:
+                self._from_tsv = True
             logger.info(f"Cache cargado con {len(self._codes)} indicadores")
     
     def is_loaded(self) -> bool:
@@ -60,12 +86,13 @@ class IndicatorCache:
         """Verifica si un código de indicador existe.
         
         Args:
-            code: Código del indicador (case-insensitive)
+            code: Código del indicador (normalizado automáticamente)
             
         Returns:
             True si el código existe en el cache.
         """
-        return code.upper() in self._codes
+        normalized = self.normalize_code(code)
+        return normalized in self._codes
     
     def get_info(self, code: str) -> Optional[IndicatorInfo]:
         """Obtiene información de un indicador.
@@ -224,7 +251,8 @@ def load_cache_from_tsv(filepath: str = None) -> IndicatorCache:
                     })
         
         if indicators:
-            cache.load(indicators)
+            # Marcar como carga desde TSV (inmutable)
+            cache.load(indicators, from_tsv=True)
             logger.info(f"Cache cargado desde TSV con {len(indicators)} indicadores")
         else:
             logger.warning("TSV vacío, cargando desde API")
