@@ -78,6 +78,7 @@ class LMStudioClient:
         system_prompt: Optional[str] = None,
         history: Optional[List[Dict[str, str]]] = None,
         use_tools: bool = True,
+        debug: bool = False,
     ) -> str:
         """Envía un mensaje y obtiene una respuesta.
         
@@ -86,10 +87,14 @@ class LMStudioClient:
             system_prompt: Prompt de sistema (opcional)
             history: Historial de conversación previo
             use_tools: Si usar los tools registrados
+            debug: Si guardar llamadas a herramientas para debugging
         
         Returns:
             Respuesta del modelo como string.
         """
+        # Inicializar lista de tool calls para debug
+        self._last_tool_calls = []
+        self._debug = debug
         messages = []
         
         # System prompt
@@ -321,8 +326,17 @@ class LMStudioClient:
                     result_str = json.dumps(result, ensure_ascii=False, default=str)
                 except Exception as e:
                     result_str = json.dumps({"error": str(e)})
+                    result = {"error": str(e)}
             else:
                 result_str = json.dumps({"error": f"Tool '{func_name}' not found"})
+                result = {"error": f"Tool '{func_name}' not found"}
+            
+            # Guardar para debug
+            self._last_tool_calls.append({
+                "name": func_name,
+                "args": func_args,
+                "result": result
+            })
             
             # Añadir resultado del tool
             messages.append({

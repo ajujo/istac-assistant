@@ -68,8 +68,11 @@ def chat(
     # Historial de conversación
     history = []
     
-    console.print(f"[dim]Escribe 'salir' o 'exit' para terminar, '/lang es|en' para cambiar idioma[/dim]")
+    console.print(f"[dim]Escribe 'salir' o 'exit' para terminar, '/debug' para activar trazabilidad[/dim]")
     console.print()
+    
+    # Estado de debug interactivo
+    debug_mode = debug
     
     while True:
         try:
@@ -92,6 +95,34 @@ def chat(
                     console.print(f"[green]{t('language_changed')}[/green]")
                 continue
             
+            # Comando /debug - toggle
+            if user_input.lower() == '/debug':
+                debug_mode = not debug_mode
+                status = "✅ ACTIVADO" if debug_mode else "❌ DESACTIVADO"
+                console.print(f"[yellow]Modo debug: {status}[/yellow]")
+                if debug_mode:
+                    console.print("[dim]Verás las llamadas a herramientas y respuestas de la API[/dim]")
+                continue
+            
+            # Comando /tools - listar herramientas
+            if user_input.lower() == '/tools':
+                from .llm.tools import TOOL_FUNCTIONS
+                console.print("[bold]Herramientas disponibles:[/bold]")
+                for name in TOOL_FUNCTIONS:
+                    console.print(f"  • {name}")
+                continue
+            
+            # Comando /indicadores - buscar indicadores reales
+            if user_input.lower().startswith('/indicadores'):
+                query = user_input[12:].strip() or "poblacion"
+                from .data import get_client
+                istac = get_client()
+                results = istac.search_indicators(query, limit=10)
+                console.print(f"[bold]Indicadores con '{query}':[/bold]")
+                for r in results:
+                    console.print(f"  • [green]{r['code']}[/green]: {r['title']}")
+                continue
+            
             # Enviar al LLM
             console.print(f"[dim]{t('chat.thinking')}[/dim]")
             
@@ -102,7 +133,19 @@ def chat(
                     system_prompt=system_prompt,
                     history=history,
                     use_tools=True,
+                    debug=debug_mode,  # Pasar modo debug
                 )
+                
+                # En modo debug, mostrar info de herramientas usadas
+                if debug_mode and hasattr(llm, '_last_tool_calls'):
+                    for tc in llm._last_tool_calls:
+                        console.print(Panel(
+                            f"[bold]Herramienta:[/bold] {tc.get('name', 'unknown')}\n"
+                            f"[bold]Args:[/bold] {tc.get('args', {})}\n"
+                            f"[bold]Resultado:[/bold] {str(tc.get('result', ''))[:200]}...",
+                            title="🔧 Tool Call",
+                            border_style="yellow"
+                        ))
                 
                 # Mostrar respuesta en Panel verde
                 console.print()
@@ -123,7 +166,7 @@ def chat(
                     
             except Exception as e:
                 console.print(f"[red]❌ Error: {e}[/red]")
-                if debug:
+                if debug_mode:
                     console.print_exception()
                     
         except KeyboardInterrupt:
