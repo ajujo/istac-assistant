@@ -40,3 +40,14 @@ istac:
 logging:
   level: "INFO"  # DEBUG, INFO, WARNING, ERROR
   file: "./logs/assistant.log"
+
+# Límites de Seguridad (Anti-sobrecarga del LLM)
+limits:
+  max_rows_to_show: 500       # Máximo filas a mostrar al LLM
+  max_cells_to_llm: 5000      # Máximo celdas (filas * columnas)
+  max_download_mb: 200        # Máximo descarga en MB
+
+# Validación
+validation:
+  enable_strict_validation: true   # Validar códigos antes de consultar
+  enable_traceability_check: true  # Rechazar respuestas sin trazabilidad

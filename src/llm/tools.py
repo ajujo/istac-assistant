@@ -143,6 +143,13 @@ def search_indicators(query: str = "", limit: int = 25) -> Dict[str, Any]:
     """Busca indicadores por texto."""
     client = get_client()
     results = client.search_indicators(query, limit)
+    
+    # Actualizar cache con resultados
+    from ..data.ids_cache import get_cache
+    cache = get_cache()
+    if not cache.is_loaded():
+        cache.load(results)
+    
     return {
         "count": len(results),
         "indicators": results,
@@ -151,7 +158,28 @@ def search_indicators(query: str = "", limit: int = 25) -> Dict[str, Any]:
 
 
 def get_indicator_info(code: str) -> Dict[str, Any]:
-    """Obtiene información de un indicador."""
+    """Obtiene información de un indicador.
+    
+    VALIDA que el código exista antes de consultar la API.
+    """
+    from ..data.validator import validate_indicator
+    
+    # Validar código primero
+    validation = validate_indicator(code)
+    if not validation.is_valid:
+        # Devolver error con sugerencias
+        suggestions = [
+            {"code": s.code, "title": s.title}
+            for s in validation.suggestions[:5]
+        ]
+        return {
+            "error": validation.message,
+            "code_not_found": code,
+            "suggestions": suggestions,
+            "hint": "Usa search_indicators para buscar indicadores válidos"
+        }
+    
+    # Código válido - consultar API
     client = get_client()
     info = client.get_indicator(code)
     if info:
@@ -165,12 +193,45 @@ def get_indicator_data(
     time: Optional[str] = None,
     measure: str = "ABSOLUTE"
 ) -> Dict[str, Any]:
-    """Obtiene datos de un indicador con trazabilidad."""
+    """Obtiene datos de un indicador con trazabilidad.
+    
+    VALIDA que el código exista antes de consultar la API.
+    APLICA límites de filas para proteger el LLM.
+    """
+    from ..data.validator import validate_indicator
+    from ..config import get
+    
+    # Validar código primero
+    validation = validate_indicator(code)
+    if not validation.is_valid:
+        suggestions = [
+            {"code": s.code, "title": s.title}
+            for s in validation.suggestions[:5]
+        ]
+        return {
+            "error": validation.message,
+            "code_not_found": code,
+            "suggestions": suggestions,
+            "hint": "Usa search_indicators para buscar indicadores válidos"
+        }
+    
+    # Obtener límites de config
+    limits = get("limits", {})
+    max_rows = limits.get("max_rows_to_show", 500)
+    
     client = get_client()
     df, traceability = client.get_indicator_data(code, geo, time, measure)
     
     if df is None:
         return {"error": f"No se pudieron obtener datos de '{code}'"}
+    
+    # Aplicar límite de filas
+    total_rows = len(df)
+    if total_rows > max_rows:
+        df = df.head(max_rows)
+        truncated = True
+    else:
+        truncated = False
     
     # Convertir DataFrame a formato para LLM
     data_dict = df.to_dict(orient='records')
@@ -178,8 +239,13 @@ def get_indicator_data(
     result = {
         "data": data_dict,
         "count": len(df),
+        "total_rows": total_rows,
+        "truncated": truncated,
         "columns": list(df.columns),
     }
+    
+    if truncated:
+        result["warning"] = f"Datos truncados: mostrando {max_rows} de {total_rows} filas"
     
     if traceability:
         result["traceability"] = traceability.to_dict()
