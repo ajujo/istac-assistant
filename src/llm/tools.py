@@ -161,22 +161,30 @@ def get_indicator_info(code: str) -> Dict[str, Any]:
     """Obtiene información de un indicador.
     
     VALIDA que el código exista antes de consultar la API.
+    Si no existe, usa Resolver para sugerir candidatos.
     """
-    from ..data.validator import validate_indicator
+    from ..data.resolver import resolve_indicator
     
-    # Validar código primero
-    validation = validate_indicator(code)
-    if not validation.is_valid:
-        # Devolver error con sugerencias
-        suggestions = [
-            {"code": s.code, "title": s.title}
-            for s in validation.suggestions[:5]
+    # Resolver el código (valida + busca alternativas si no existe)
+    result = resolve_indicator(code)
+    
+    if not result.success:
+        # No existe - devolver candidatos para selección
+        candidates = [
+            {
+                "num": i+1,
+                "code": c.code,
+                "title": c.title
+            }
+            for i, c in enumerate(result.candidates[:10])
         ]
+        
         return {
-            "error": validation.message,
+            "error": result.message,
             "code_not_found": code,
-            "suggestions": suggestions,
-            "hint": "Usa search_indicators para buscar indicadores válidos"
+            "candidates": candidates,
+            "selection_required": result.needs_selection,
+            "instruction": "El usuario debe elegir un número (1-{}) o escribir el código exacto".format(len(candidates)) if candidates else "Usa search_indicators para buscar",
         }
     
     # Código válido - consultar API
@@ -198,21 +206,29 @@ def get_indicator_data(
     VALIDA que el código exista antes de consultar la API.
     APLICA límites de filas para proteger el LLM.
     """
-    from ..data.validator import validate_indicator
+    from ..data.resolver import resolve_indicator
     from ..config import get
     
-    # Validar código primero
-    validation = validate_indicator(code)
-    if not validation.is_valid:
-        suggestions = [
-            {"code": s.code, "title": s.title}
-            for s in validation.suggestions[:5]
+    # Resolver el código (valida + busca alternativas si no existe)
+    result = resolve_indicator(code)
+    
+    if not result.success:
+        # No existe - devolver candidatos para selección
+        candidates = [
+            {
+                "num": i+1,
+                "code": c.code,
+                "title": c.title
+            }
+            for i, c in enumerate(result.candidates[:10])
         ]
+        
         return {
-            "error": validation.message,
+            "error": result.message,
             "code_not_found": code,
-            "suggestions": suggestions,
-            "hint": "Usa search_indicators para buscar indicadores válidos"
+            "candidates": candidates,
+            "selection_required": result.needs_selection,
+            "instruction": "El usuario debe elegir un número (1-{}) o escribir el código exacto".format(len(candidates)) if candidates else "Usa search_indicators para buscar",
         }
     
     # Obtener límites de config
