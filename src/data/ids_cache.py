@@ -177,3 +177,74 @@ def load_cache_from_api() -> IndicatorCache:
         logger.error(f"Error cargando cache: {e}")
     
     return cache
+
+
+def load_cache_from_tsv(filepath: str = None) -> IndicatorCache:
+    """Carga el cache desde un archivo TSV de indicadores.
+    
+    Este método es preferido porque carga la lista REAL de indicadores
+    exportada directamente del ISTAC.
+    
+    Args:
+        filepath: Ruta al archivo TSV (por defecto tests/Indicadores_actuales.tsv)
+        
+    Returns:
+        Cache cargado.
+    """
+    import csv
+    from pathlib import Path
+    
+    cache = get_cache()
+    if cache.is_loaded():
+        return cache
+    
+    # Ruta por defecto
+    if filepath is None:
+        # Buscar en la raíz del proyecto
+        project_root = Path(__file__).parent.parent.parent
+        filepath = project_root / "tests" / "Indicadores_actuales.tsv"
+    
+    filepath = Path(filepath)
+    if not filepath.exists():
+        logger.warning(f"Archivo TSV no encontrado: {filepath}")
+        return load_cache_from_api()  # Fallback a API
+    
+    try:
+        indicators = []
+        with open(filepath, 'r', encoding='utf-8') as f:
+            reader = csv.DictReader(f, delimiter='\t')
+            for row in reader:
+                code = row.get('code', '').strip()
+                title = row.get('production-title#es', '').strip()
+                if code and code.upper() != 'CODE':  # Ignorar header
+                    indicators.append({
+                        'code': code,
+                        'title': title,
+                        'subject': ''
+                    })
+        
+        if indicators:
+            cache.load(indicators)
+            logger.info(f"Cache cargado desde TSV con {len(indicators)} indicadores")
+        else:
+            logger.warning("TSV vacío, cargando desde API")
+            return load_cache_from_api()
+            
+    except Exception as e:
+        logger.error(f"Error cargando TSV: {e}")
+        return load_cache_from_api()
+    
+    return cache
+
+
+def ensure_cache_loaded() -> IndicatorCache:
+    """Asegura que el cache esté cargado, preferentemente desde TSV.
+    
+    Returns:
+        Cache cargado.
+    """
+    cache = get_cache()
+    if not cache.is_loaded():
+        # Intentar primero desde TSV (más confiable)
+        cache = load_cache_from_tsv()
+    return cache

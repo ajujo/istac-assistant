@@ -9,7 +9,7 @@ independiente del modelo LLM:
 from typing import Any, Dict, List, Optional, Tuple
 from dataclasses import dataclass
 
-from .ids_cache import get_cache, load_cache_from_api, IndicatorInfo
+from .ids_cache import get_cache, ensure_cache_loaded, IndicatorInfo
 from ..config import logger
 
 
@@ -40,7 +40,7 @@ class IndicatorValidator:
         """
         self._cache = get_cache()
         if auto_load and not self._cache.is_loaded():
-            load_cache_from_api()
+            ensure_cache_loaded()  # Prefiere TSV
     
     def validate_code(self, code: str) -> ValidationResult:
         """Valida un código de indicador.
