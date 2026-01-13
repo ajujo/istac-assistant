@@ -1,0 +1,42 @@
+# ISTAC Data Assistant - Configuration
+
+app:
+  name: "ISTAC Data Assistant"
+  version: "0.1.0"
+  language: "es"  # es, en
+
+# LLM Provider Configuration
+llm:
+  provider: "lmstudio"  # lmstudio, openai, gemini
+  
+  lmstudio:
+    base_url: "http://localhost:1234/v1"
+    model: "local-model"  # LMStudio selecciona el modelo cargado
+    temperature: 0.7
+    max_tokens: 4096
+  
+  openai:
+    api_key: "${OPENAI_API_KEY}"
+    model: "gpt-4o"
+    temperature: 0.7
+  
+  gemini:
+    api_key: "${GEMINI_API_KEY}"
+    model: "gemini-1.5-pro"
+
+# Data Storage
+storage:
+  base_path: "./data"
+  cache_ttl_hours: 24
+  max_download_rows: 500000  # Límite de descarga por dataset
+  max_display_rows: 1000     # Límite de visualización
+
+# ISTAC API
+istac:
+  auto_sync: false  # Pull manual por defecto
+  check_updates_on_start: true
+
+# Logging
+logging:
+  level: "INFO"  # DEBUG, INFO, WARNING, ERROR
+  file: "./logs/assistant.log"

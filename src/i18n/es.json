@@ -1,0 +1,56 @@
+{
+    "app_name": "ISTAC Data Assistant",
+    "welcome": "¡Bienvenido al Asistente de Datos del ISTAC!",
+    "goodbye": "¡Hasta pronto!",
+    "loading": "Cargando...",
+    "error": "Ha ocurrido un error",
+    "language_changed": "Idioma cambiado a español",
+    
+    "menu": {
+        "chat": "Conversar con el asistente",
+        "search": "Buscar recursos",
+        "indicators": "Indicadores",
+        "datasets": "Cubos de datos",
+        "download": "Descargar datos",
+        "settings": "Configuración",
+        "help": "Ayuda",
+        "exit": "Salir"
+    },
+    
+    "chat": {
+        "prompt": "Tú",
+        "assistant": "Asistente",
+        "thinking": "Pensando...",
+        "no_connection": "No se pudo conectar con el modelo LLM",
+        "type_message": "Escribe tu mensaje..."
+    },
+    
+    "data": {
+        "source": "Fuente ISTAC",
+        "indicator": "Indicador",
+        "dataset": "Dataset",
+        "code": "Código",
+        "filters": "Filtros aplicados",
+        "period": "Periodo temporal",
+        "query": "Consulta realizada",
+        "geography": "Ámbito geográfico",
+        "rows": "filas",
+        "columns": "columnas",
+        "download_complete": "Descarga completada",
+        "no_data": "No se encontraron datos"
+    },
+    
+    "limits": {
+        "max_rows_exceeded": "El dataset supera el límite de {limit} filas. Se muestran las primeras {shown}.",
+        "suggest_filter": "Sugerencia: usa filtros para reducir el volumen de datos.",
+        "suggest_aggregate": "Sugerencia: solicita agregados o resúmenes en lugar de datos crudos."
+    },
+    
+    "sync": {
+        "checking": "Comprobando actualizaciones...",
+        "up_to_date": "Los datos están actualizados",
+        "updates_available": "Hay {count} recursos con actualizaciones disponibles",
+        "downloading": "Descargando actualizaciones...",
+        "sync_complete": "Sincronización completada"
+    }
+}

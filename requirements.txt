@@ -1,0 +1,29 @@
+# ISTAC Data Assistant - Dependencies
+
+# Core
+python-dotenv>=1.0.0
+pyyaml>=6.0
+rich>=13.0.0
+typer>=0.9.0
+
+# ISTAC API
+istacpy>=0.9.0
+
+# LLM
+openai>=1.0.0  # Compatible con LMStudio
+
+# Data handling
+pandas>=2.0.0
+duckdb>=0.9.0
+pyarrow>=14.0.0  # Para Parquet
+
+# Analysis & Charts
+matplotlib>=3.7.0
+seaborn>=0.13.0
+scipy>=1.11.0
+
+# Optional: Async support
+# aiohttp>=3.9.0
+
+# Optional: Streamlit UI
+# streamlit>=1.29.0

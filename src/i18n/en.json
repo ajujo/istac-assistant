@@ -1,0 +1,51 @@
+{
+    "app_name": "ISTAC Data Assistant",
+    "welcome": "Welcome to the ISTAC Data Assistant!",
+    "goodbye": "Goodbye!",
+    "loading": "Loading...",
+    "error": "An error occurred",
+    "language_changed": "Language changed to English",
+    "menu": {
+        "chat": "Chat with assistant",
+        "search": "Search resources",
+        "indicators": "Indicators",
+        "datasets": "Data cubes",
+        "download": "Download data",
+        "settings": "Settings",
+        "help": "Help",
+        "exit": "Exit"
+    },
+    "chat": {
+        "prompt": "You",
+        "assistant": "Assistant",
+        "thinking": "Thinking...",
+        "no_connection": "Could not connect to LLM model",
+        "type_message": "Type your message..."
+    },
+    "data": {
+        "source": "ISTAC Source",
+        "indicator": "Indicator",
+        "dataset": "Dataset",
+        "code": "Code",
+        "filters": "Applied filters",
+        "period": "Time period",
+        "query": "Query performed",
+        "geography": "Geographic scope",
+        "rows": "rows",
+        "columns": "columns",
+        "download_complete": "Download complete",
+        "no_data": "No data found"
+    },
+    "limits": {
+        "max_rows_exceeded": "Dataset exceeds {limit} row limit. Showing first {shown}.",
+        "suggest_filter": "Suggestion: use filters to reduce data volume.",
+        "suggest_aggregate": "Suggestion: request aggregates or summaries instead of raw data."
+    },
+    "sync": {
+        "checking": "Checking for updates...",
+        "up_to_date": "Data is up to date",
+        "updates_available": "{count} resources have updates available",
+        "downloading": "Downloading updates...",
+        "sync_complete": "Sync complete"
+    }
+}
