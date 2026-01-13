@@ -414,6 +414,58 @@ class ISTACApi:
             return True
         except Exception:
             return False
+    
+    def get_classification_codes(
+        self, 
+        agency: str, 
+        resource_id: str, 
+        version: str = "~latest",
+        limit: int = 500
+    ) -> List[Dict]:
+        """Obtiene los códigos de una clasificación."""
+        endpoint = f"{API_ENDPOINTS['structural_resources']}/codelists/{agency}/{resource_id}/{version}/codes"
+        params = {"limit": limit}
+        
+        try:
+            data = self._request(endpoint, params)
+        except requests.exceptions.HTTPError:
+            return []
+        
+        return [
+            {
+                "code": item.get("id", ""),
+                "name": self._get_localized_text(item.get("name", {})),
+                "parent": item.get("parent", ""),
+            }
+            for item in data.get("code", [])
+        ]
+    
+    def export_classification_csv(
+        self, 
+        agency: str, 
+        resource_id: str, 
+        output_path: str,
+        version: str = "~latest"
+    ) -> Optional[str]:
+        """Exporta una clasificación a CSV."""
+        import csv
+        from pathlib import Path
+        
+        codes = self.get_classification_codes(agency, resource_id, version)
+        if not codes:
+            return None
+        
+        # Crear directorio si no existe
+        output_file = Path(output_path)
+        output_file.parent.mkdir(parents=True, exist_ok=True)
+        
+        # Escribir CSV
+        with open(output_file, 'w', newline='', encoding='utf-8') as f:
+            writer = csv.DictWriter(f, fieldnames=['code', 'name', 'parent'])
+            writer.writeheader()
+            writer.writerows(codes)
+        
+        return str(output_file)
 
 
 # =============================================================================
