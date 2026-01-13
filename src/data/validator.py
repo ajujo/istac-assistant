@@ -212,3 +212,135 @@ def resolve_indicator(code: str) -> Tuple[bool, str, str]:
     """Resuelve un código de indicador."""
     validator = IndicatorValidator()
     return validator.resolve_code(code)
+
+
+# =============================================================================
+# POST-VALIDACIÓN DE RESPUESTAS DEL LLM
+# =============================================================================
+
+def detect_indicator_codes(text: str) -> List[str]:
+    """Detecta posibles códigos de indicador en un texto.
+    
+    Busca patrones típicos de códigos ISTAC:
+    - PALABRAS_EN_MAYUSCULAS_CON_GUIONES
+    - POBLACION_ALGO, TURISMO_ALGO, etc.
+    
+    Args:
+        text: Texto a analizar
+        
+    Returns:
+        Lista de posibles códigos encontrados.
+    """
+    import re
+    
+    # Patrón: palabras en mayúsculas con guiones bajos
+    pattern = r'\b([A-Z][A-Z0-9]*(?:_[A-Z0-9]+)+)\b'
+    
+    matches = re.findall(pattern, text)
+    
+    # Filtrar falsos positivos comunes
+    exclude = {'API_KEY', 'HTTP_ERROR', 'JSON_ERROR', 'UTF_8', 'ISO_8859'}
+    
+    return [m for m in matches if m not in exclude and len(m) > 5]
+
+
+@dataclass
+class ResponseValidationResult:
+    """Resultado de validación de respuesta del LLM."""
+    is_valid: bool
+    invalid_codes: List[str]
+    valid_codes: List[str]
+    suggestions: Dict[str, List[str]]  # código_inválido -> sugerencias
+    message: str
+
+
+def validate_response_codes(response: str) -> ResponseValidationResult:
+    """Valida que todos los códigos de indicador en una respuesta sean reales.
+    
+    Esta es la función clave para anti-alucinación: escanea la respuesta
+    del LLM buscando códigos y verifica que existan en el cache.
+    
+    Args:
+        response: Respuesta del LLM
+        
+    Returns:
+        ResponseValidationResult con códigos válidos/inválidos.
+    """
+    from .ids_cache import ensure_cache_loaded
+    
+    cache = ensure_cache_loaded()
+    
+    # Detectar códigos en el texto
+    detected_codes = detect_indicator_codes(response)
+    
+    if not detected_codes:
+        return ResponseValidationResult(
+            is_valid=True,
+            invalid_codes=[],
+            valid_codes=[],
+            suggestions={},
+            message="Sin códigos de indicador detectados"
+        )
+    
+    valid_codes = []
+    invalid_codes = []
+    suggestions = {}
+    
+    for code in detected_codes:
+        if cache.is_valid(code):
+            valid_codes.append(code)
+        else:
+            invalid_codes.append(code)
+            # Buscar sugerencias
+            similar = cache.find_similar(code, limit=3)
+            suggestions[code] = [s.code for s in similar]
+    
+    if invalid_codes:
+        invalid_list = ", ".join(invalid_codes)
+        return ResponseValidationResult(
+            is_valid=False,
+            invalid_codes=invalid_codes,
+            valid_codes=valid_codes,
+            suggestions=suggestions,
+            message=f"Códigos inválidos detectados: {invalid_list}"
+        )
+    
+    return ResponseValidationResult(
+        is_valid=True,
+        invalid_codes=[],
+        valid_codes=valid_codes,
+        suggestions={},
+        message=f"Todos los códigos son válidos: {', '.join(valid_codes)}"
+    )
+
+
+def format_code_correction(result: ResponseValidationResult) -> str:
+    """Formatea un mensaje de corrección para códigos inválidos.
+    
+    Args:
+        result: Resultado de validación
+        
+    Returns:
+        Mensaje formateado para mostrar al usuario.
+    """
+    if result.is_valid:
+        return ""
+    
+    lines = [
+        "⚠️ **Atención**: La respuesta contiene códigos de indicador que NO existen:",
+        ""
+    ]
+    
+    for code in result.invalid_codes:
+        suggestions = result.suggestions.get(code, [])
+        if suggestions:
+            lines.append(f"• `{code}` → ¿Quizás quisiste decir: {', '.join(suggestions)}?")
+        else:
+            lines.append(f"• `{code}` → No existe")
+    
+    lines.extend([
+        "",
+        "Usa `/indicadores población` para ver los códigos reales disponibles."
+    ])
+    
+    return "\n".join(lines)

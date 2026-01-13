@@ -154,6 +154,20 @@ def chat(
                     title=t('chat.assistant'),
                     border_style="green"
                 ))
+                
+                # POST-VALIDACIÓN: Detectar códigos inventados
+                from .data.validator import validate_response_codes, format_code_correction
+                
+                code_validation = validate_response_codes(response)
+                if not code_validation.is_valid:
+                    # Mostrar advertencia con códigos inválidos y sugerencias
+                    correction_msg = format_code_correction(code_validation)
+                    console.print(Panel(
+                        Markdown(correction_msg),
+                        title="⚠️ Códigos Inventados Detectados",
+                        border_style="red"
+                    ))
+                
                 console.print()
                 
                 # Añadir al historial
