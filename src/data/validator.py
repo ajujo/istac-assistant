@@ -239,7 +239,15 @@ def detect_indicator_codes(text: str) -> List[str]:
     matches = re.findall(pattern, text)
     
     # Filtrar falsos positivos comunes
-    exclude = {'API_KEY', 'HTTP_ERROR', 'JSON_ERROR', 'UTF_8', 'ISO_8859'}
+    exclude = {
+        # Técnicos
+        'API_KEY', 'HTTP_ERROR', 'JSON_ERROR', 'UTF_8', 'ISO_8859',
+        # LLM internos
+        'TOOL_REQUEST', 'END_TOOL_REQUEST', 'TOOL_CALL', 'END_TOOL',
+        'FUNCTION_CALL', 'END_FUNCTION',
+        # Parámetros de herramientas
+        'ANNUAL_PERCENTAGE_RATE',
+    }
     
     return [m for m in matches if m not in exclude and len(m) > 5]
 

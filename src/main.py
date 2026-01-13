@@ -59,6 +59,11 @@ def chat(
     console.print("[green]✅ Conectado a LMStudio[/green]")
     console.print()
     
+    # Pre-cargar cache de indicadores desde TSV (259 indicadores)
+    from .data.ids_cache import ensure_cache_loaded
+    cache = ensure_cache_loaded()
+    console.print(f"[dim]📊 Cache: {cache.count()} indicadores cargados[/dim]")
+    
     # Registrar tools
     register_tools(llm)
     
