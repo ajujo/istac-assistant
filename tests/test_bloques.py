@@ -182,6 +182,34 @@ def test_resolve_query():
     return passed, f"Indicador: {result.indicator_code}, Dims: {result.dimensions_detected}"
 
 
+def test_dimension_values():
+    """B2: Resolver valores de dimensión (islas, sexo)."""
+    from src.data.dimensions import resolve_island, resolve_sex, resolve_geo_granularity
+    
+    all_passed = True
+    messages = []
+    
+    # Test islas
+    island = resolve_island("Tenerife")
+    passed = island is not None and island.api_code == "38"
+    all_passed = all_passed and passed
+    messages.append(f"Tenerife → {island.api_code if island else 'None'} {'✅' if passed else '❌'}")
+    
+    # Test sexo
+    sex = resolve_sex("hombres")
+    passed = sex is not None and sex.api_code == "MALE"
+    all_passed = all_passed and passed
+    messages.append(f"hombres → {sex.api_code if sex else 'None'} {'✅' if passed else '❌'}")
+    
+    # Test granularidad
+    geo = resolve_geo_granularity("isla")
+    passed = geo == "ISLANDS"
+    all_passed = all_passed and passed
+    messages.append(f"isla → {geo} {'✅' if passed else '❌'}")
+    
+    return all_passed, "\n".join(messages)
+
+
 def run_all_tests():
     """Ejecuta todos los tests y muestra resultados."""
     
@@ -197,6 +225,7 @@ def run_all_tests():
         ("A6: Exclusiones (TOOL_REQUEST)", test_exclusiones),
         ("B1: Analyze query (dims)", test_analyze_query),
         ("B1b: Resolve query educativo", test_resolve_query),
+        ("B2: Valores de dimensión", test_dimension_values),
     ]
     
     table = Table(title="Resultados")

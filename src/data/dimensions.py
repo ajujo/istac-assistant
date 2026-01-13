@@ -273,3 +273,169 @@ def suggest_correct_usage(
     ]
     
     return "\n".join(lines)
+
+
+# =============================================================================
+# B2: VALORES DE DIMENSIÓN (MVP con listas locales)
+# =============================================================================
+
+# Islas de Canarias con sus códigos
+ISLAS_CANARIAS = {
+    # nombre_normalizado: (nombre_oficial, código_INE)
+    'tenerife': ('Tenerife', '38'),
+    'gran canaria': ('Gran Canaria', '35'),
+    'grancanaria': ('Gran Canaria', '35'),
+    'lanzarote': ('Lanzarote', '35004'),
+    'fuerteventura': ('Fuerteventura', '35006'),
+    'la palma': ('La Palma', '38024'),
+    'lapalma': ('La Palma', '38024'),
+    'la gomera': ('La Gomera', '38012'),
+    'lagomera': ('La Gomera', '38012'),
+    'el hierro': ('El Hierro', '38018'),
+    'elhierro': ('El Hierro', '38018'),
+    'hierro': ('El Hierro', '38018'),
+    'la graciosa': ('La Graciosa', '35004'),
+    'canarias': ('Canarias', 'ES70'),
+}
+
+# Valores de sexo
+SEXO_VALUES = {
+    'total': ('Total', 'TOTAL'),
+    'hombre': ('Hombres', 'MALE'),
+    'hombres': ('Hombres', 'MALE'),
+    'mujer': ('Mujeres', 'FEMALE'),
+    'mujeres': ('Mujeres', 'FEMALE'),
+}
+
+# Granularidades geográficas para la API
+GEO_GRANULARITIES = {
+    'isla': 'ISLANDS',
+    'islas': 'ISLANDS',
+    'municipio': 'MUNICIPALITIES',
+    'municipios': 'MUNICIPALITIES',
+    'comarca': 'COUNTIES',
+    'comarcas': 'COUNTIES',
+    'provincia': 'PROVINCES',
+    'provincias': 'PROVINCES',
+    'region': 'REGIONS',
+    'comunidad': 'REGIONS',
+    'canarias': 'REGIONS',
+}
+
+
+@dataclass
+class DimensionValue:
+    """Valor de dimensión resuelto."""
+    dimension_type: str    # GEOGRAPHICAL, SEX, etc.
+    user_input: str        # Lo que escribió el usuario
+    resolved_name: str     # Nombre oficial
+    api_code: str          # Código para la API
+    is_valid: bool
+
+
+def resolve_island(text: str) -> Optional[DimensionValue]:
+    """Resuelve un nombre de isla a su código.
+    
+    Args:
+        text: Nombre de la isla (ej: "Tenerife", "gran canaria")
+        
+    Returns:
+        DimensionValue o None si no es una isla.
+    """
+    text_lower = text.lower().strip()
+    
+    if text_lower in ISLAS_CANARIAS:
+        name, code = ISLAS_CANARIAS[text_lower]
+        return DimensionValue(
+            dimension_type='GEOGRAPHICAL',
+            user_input=text,
+            resolved_name=name,
+            api_code=code,
+            is_valid=True
+        )
+    
+    # Buscar parcial
+    for key, (name, code) in ISLAS_CANARIAS.items():
+        if text_lower in key or key in text_lower:
+            return DimensionValue(
+                dimension_type='GEOGRAPHICAL',
+                user_input=text,
+                resolved_name=name,
+                api_code=code,
+                is_valid=True
+            )
+    
+    return None
+
+
+def resolve_sex(text: str) -> Optional[DimensionValue]:
+    """Resuelve un valor de sexo.
+    
+    Args:
+        text: Valor de sexo (ej: "hombres", "mujeres")
+        
+    Returns:
+        DimensionValue o None.
+    """
+    text_lower = text.lower().strip()
+    
+    if text_lower in SEXO_VALUES:
+        name, code = SEXO_VALUES[text_lower]
+        return DimensionValue(
+            dimension_type='SEX',
+            user_input=text,
+            resolved_name=name,
+            api_code=code,
+            is_valid=True
+        )
+    
+    return None
+
+
+def resolve_geo_granularity(text: str) -> Optional[str]:
+    """Resuelve una palabra a granularidad geográfica de la API.
+    
+    Args:
+        text: Palabra (ej: "isla", "municipio")
+        
+    Returns:
+        Código de granularidad para la API (ej: "ISLANDS")
+    """
+    text_lower = text.lower().strip()
+    return GEO_GRANULARITIES.get(text_lower)
+
+
+def resolve_dimension_value(text: str) -> Optional[DimensionValue]:
+    """Intenta resolver un valor de dimensión de cualquier tipo.
+    
+    Args:
+        text: Texto del usuario
+        
+    Returns:
+        DimensionValue o None.
+    """
+    # Intentar como isla
+    result = resolve_island(text)
+    if result:
+        return result
+    
+    # Intentar como sexo
+    result = resolve_sex(text)
+    if result:
+        return result
+    
+    return None
+
+
+def format_islands_list() -> str:
+    """Formatea lista de islas para mostrar al usuario."""
+    islands = [
+        "Tenerife", "Gran Canaria", "Lanzarote", "Fuerteventura",
+        "La Palma", "La Gomera", "El Hierro", "La Graciosa"
+    ]
+    
+    lines = ["Islas de Canarias disponibles:", ""]
+    for i, island in enumerate(islands, 1):
+        lines.append(f"{i}) {island}")
+    
+    return "\n".join(lines)
