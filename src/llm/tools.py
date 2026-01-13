@@ -1,13 +1,12 @@
 """Tools (herramientas) para el LLM.
 
 Estas funciones son expuestas al LLM como herramientas que puede invocar.
-Cada tool tiene un contrato JSON claro y no depende de ningún framework específico.
+Usa la API directa del ISTAC (sin istacpy).
 """
 
 from typing import Any, Dict, List, Optional
 
-from ..data import get_client as get_istac_client
-from ..policies import prepare_data_for_llm
+from ..data import get_client
 
 
 # =============================================================================
@@ -27,8 +26,8 @@ TOOL_DEFINITIONS = [
                 },
                 "limit": {
                     "type": "integer",
-                    "description": "Máximo de resultados a devolver (default: 20)",
-                    "default": 20
+                    "description": "Máximo de resultados (default: 25)",
+                    "default": 25
                 }
             },
             "required": []
@@ -36,7 +35,7 @@ TOOL_DEFINITIONS = [
     },
     {
         "name": "get_indicator_info",
-        "description": "Obtiene información detallada de un indicador: descripción, granularidades disponibles, años disponibles, etc. SIEMPRE usa esto antes de get_indicator_data para conocer las granularidades correctas.",
+        "description": "Obtiene información detallada de un indicador: descripción, granularidades, años disponibles. SIEMPRE usa esto primero antes de pedir datos.",
         "parameters": {
             "type": "object",
             "properties": {
@@ -50,7 +49,7 @@ TOOL_DEFINITIONS = [
     },
     {
         "name": "get_indicator_data",
-        "description": "Obtiene datos numéricos de un indicador. IMPORTANTE: Usa get_indicator_info primero para conocer las granularidades disponibles.",
+        "description": "Obtiene datos numéricos de un indicador con filtros opcionales.",
         "parameters": {
             "type": "object",
             "properties": {
@@ -60,15 +59,16 @@ TOOL_DEFINITIONS = [
                 },
                 "geo": {
                     "type": "string",
-                    "description": "Filtro geográfico: 'R'=regiones (Canarias), 'I'=islas, 'M'=municipios. NO uses 'R|Canarias', solo 'R'."
+                    "description": "Filtro geográfico: 'REGIONS'=Canarias, 'ISLANDS'=islas, 'MUNICIPALITIES'=municipios"
                 },
                 "time": {
                     "type": "string",
-                    "description": "Filtro temporal. Solo si conoces la granularidad del indicador. Omítelo si no estás seguro."
+                    "description": "Filtro temporal: año(s) como '2025' o '2020|2021|2022'"
                 },
                 "measure": {
                     "type": "string",
-                    "description": "Tipo de medida: 'A'=absoluto, 'N'=tasa interanual"
+                    "description": "Tipo de medida: 'ABSOLUTE' o 'ANNUAL_PERCENTAGE_RATE'",
+                    "default": "ABSOLUTE"
                 }
             },
             "required": ["code"]
@@ -76,14 +76,18 @@ TOOL_DEFINITIONS = [
     },
     {
         "name": "list_datasets",
-        "description": "Lista los cubos de datos (datasets) disponibles en el ISTAC. Estos son diferentes a los indicadores.",
+        "description": "Lista los cubos de datos (datasets) disponibles. Son diferentes a los indicadores.",
         "parameters": {
             "type": "object",
             "properties": {
                 "limit": {
                     "type": "integer",
                     "description": "Máximo de resultados",
-                    "default": 30
+                    "default": 25
+                },
+                "query": {
+                    "type": "string",
+                    "description": "Texto para filtrar datasets"
                 }
             },
             "required": []
@@ -91,7 +95,7 @@ TOOL_DEFINITIONS = [
     },
     {
         "name": "get_subjects",
-        "description": "Obtiene las temáticas/categorías en las que se clasifican los indicadores.",
+        "description": "Obtiene las temáticas/categorías de indicadores.",
         "parameters": {
             "type": "object",
             "properties": {},
@@ -100,29 +104,29 @@ TOOL_DEFINITIONS = [
     },
     {
         "name": "list_classifications",
-        "description": "Lista las clasificaciones (codelists) disponibles, como clasificaciones de actividades económicas, territoriales, etc.",
+        "description": "Lista las clasificaciones (codelists) disponibles: CNAE, territorios, etc.",
         "parameters": {
             "type": "object",
             "properties": {
                 "limit": {
                     "type": "integer",
                     "description": "Máximo de resultados",
-                    "default": 30
+                    "default": 25
                 }
             },
             "required": []
         }
     },
     {
-        "name": "list_statistical_operations",
-        "description": "Lista las operaciones estadísticas (encuestas, censos, etc.) que realiza el ISTAC.",
+        "name": "list_operations",
+        "description": "Lista las operaciones estadísticas: encuestas, censos, etc.",
         "parameters": {
             "type": "object",
             "properties": {
                 "limit": {
                     "type": "integer",
                     "description": "Máximo de resultados",
-                    "default": 30
+                    "default": 25
                 }
             },
             "required": []
@@ -135,9 +139,9 @@ TOOL_DEFINITIONS = [
 # IMPLEMENTACIÓN DE TOOLS
 # =============================================================================
 
-def search_indicators(query: str = "", limit: int = 20) -> Dict[str, Any]:
+def search_indicators(query: str = "", limit: int = 25) -> Dict[str, Any]:
     """Busca indicadores por texto."""
-    client = get_istac_client()
+    client = get_client()
     results = client.search_indicators(query, limit)
     return {
         "count": len(results),
@@ -148,8 +152,8 @@ def search_indicators(query: str = "", limit: int = 20) -> Dict[str, Any]:
 
 def get_indicator_info(code: str) -> Dict[str, Any]:
     """Obtiene información de un indicador."""
-    client = get_istac_client()
-    info = client.get_indicator_info(code)
+    client = get_client()
+    info = client.get_indicator(code)
     if info:
         return info
     return {"error": f"No se encontró el indicador '{code}'"}
@@ -159,37 +163,34 @@ def get_indicator_data(
     code: str,
     geo: Optional[str] = None,
     time: Optional[str] = None,
-    measure: Optional[str] = None
+    measure: str = "ABSOLUTE"
 ) -> Dict[str, Any]:
     """Obtiene datos de un indicador con trazabilidad."""
-    client = get_istac_client()
+    client = get_client()
     df, traceability = client.get_indicator_data(code, geo, time, measure)
     
     if df is None:
         return {"error": f"No se pudieron obtener datos de '{code}'"}
     
-    # Convertir DataFrame a formato seguro para LLM
-    data_dict = df.to_dict()
+    # Convertir DataFrame a formato para LLM
+    data_dict = df.to_dict(orient='records')
     
-    # Preparar respuesta con trazabilidad
     result = {
         "data": data_dict,
-        "shape": {"rows": len(df), "columns": len(df.columns)},
+        "count": len(df),
         "columns": list(df.columns),
-        "index": list(df.index),
     }
     
-    # Añadir trazabilidad
     if traceability:
         result["traceability"] = traceability.to_dict()
     
     return result
 
 
-def list_datasets(limit: int = 30) -> Dict[str, Any]:
+def list_datasets(limit: int = 25, query: str = "") -> Dict[str, Any]:
     """Lista datasets disponibles."""
-    client = get_istac_client()
-    results = client.list_datasets(limit)
+    client = get_client()
+    results = client.list_datasets(limit, query)
     return {
         "count": len(results),
         "datasets": results
@@ -198,7 +199,7 @@ def list_datasets(limit: int = 30) -> Dict[str, Any]:
 
 def get_subjects() -> Dict[str, Any]:
     """Obtiene las temáticas disponibles."""
-    client = get_istac_client()
+    client = get_client()
     results = client.get_subjects()
     return {
         "count": len(results),
@@ -206,77 +207,30 @@ def get_subjects() -> Dict[str, Any]:
     }
 
 
-def list_classifications(limit: int = 30) -> Dict[str, Any]:
-    """Lista las clasificaciones (codelists) disponibles."""
-    from istacpy.structuralresources import classifications
-    
-    try:
-        response = classifications.get_structuralresources_codelists(limit=limit)
-        items = response.get('codelist', [])
-        results = [
-            {
-                "id": item.get('id', ''),
-                "name": _get_localized_text(item.get('name', {})),
-                "agency": item.get('agencyID', ''),
-            }
-            for item in items
-        ]
-        return {
-            "count": len(results),
-            "classifications": results
-        }
-    except Exception as e:
-        return {"error": str(e)}
+def list_classifications(limit: int = 25) -> Dict[str, Any]:
+    """Lista las clasificaciones disponibles."""
+    client = get_client()
+    results = client.list_classifications(limit)
+    return {
+        "count": len(results),
+        "classifications": results
+    }
 
 
-def list_statistical_operations(limit: int = 30) -> Dict[str, Any]:
-    """Lista las operaciones estadísticas disponibles."""
-    from istacpy.statisticalresources import cubes
-    
-    # Las operaciones están relacionadas con los datasets
-    # Usamos la lista de datasets como proxy
-    try:
-        response = cubes.get_statisticalresources_datasets(limit=limit)
-        items = response.get('dataset', [])
-        
-        # Extraer operaciones únicas
-        operations = {}
-        for item in items:
-            op_id = item.get('statisticalOperation', {}).get('id', '')
-            if op_id and op_id not in operations:
-                operations[op_id] = {
-                    "id": op_id,
-                    "name": _get_localized_text(item.get('statisticalOperation', {}).get('name', {})),
-                }
-        
-        return {
-            "count": len(operations),
-            "operations": list(operations.values())
-        }
-    except Exception as e:
-        return {"error": str(e)}
-
-
-def _get_localized_text(text_obj) -> str:
-    """Extrae texto localizado."""
-    if isinstance(text_obj, str):
-        return text_obj
-    if isinstance(text_obj, dict):
-        if 'text' in text_obj and isinstance(text_obj['text'], list):
-            for t in text_obj['text']:
-                if t.get('lang') == 'es':
-                    return t.get('value', '')
-            if text_obj['text']:
-                return text_obj['text'][0].get('value', '')
-        return text_obj.get('__default__', str(text_obj))
-    return str(text_obj) if text_obj else ''
+def list_operations(limit: int = 25) -> Dict[str, Any]:
+    """Lista las operaciones estadísticas."""
+    client = get_client()
+    results = client.list_operations(limit)
+    return {
+        "count": len(results),
+        "operations": results
+    }
 
 
 # =============================================================================
 # REGISTRO DE TOOLS
 # =============================================================================
 
-# Mapeo nombre -> función
 TOOL_FUNCTIONS = {
     "search_indicators": search_indicators,
     "get_indicator_info": get_indicator_info,
@@ -284,16 +238,12 @@ TOOL_FUNCTIONS = {
     "list_datasets": list_datasets,
     "get_subjects": get_subjects,
     "list_classifications": list_classifications,
-    "list_statistical_operations": list_statistical_operations,
+    "list_operations": list_operations,
 }
 
 
 def register_tools(llm_client) -> None:
-    """Registra todos los tools en el cliente LLM.
-    
-    Args:
-        llm_client: Instancia de LMStudioClient
-    """
+    """Registra todos los tools en el cliente LLM."""
     for tool_def in TOOL_DEFINITIONS:
         name = tool_def["name"]
         if name in TOOL_FUNCTIONS:
@@ -306,15 +256,7 @@ def register_tools(llm_client) -> None:
 
 
 def execute_tool(name: str, **kwargs) -> Dict[str, Any]:
-    """Ejecuta un tool por nombre.
-    
-    Args:
-        name: Nombre del tool
-        **kwargs: Argumentos del tool
-    
-    Returns:
-        Resultado del tool como diccionario.
-    """
+    """Ejecuta un tool por nombre."""
     if name in TOOL_FUNCTIONS:
         return TOOL_FUNCTIONS[name](**kwargs)
     return {"error": f"Tool '{name}' no encontrado"}

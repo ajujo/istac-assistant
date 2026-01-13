@@ -2,7 +2,15 @@
 
 Asistente inteligente para explorar, consultar y analizar datos estadísticos del [Instituto Canario de Estadística (ISTAC)](https://www.gobiernodecanarias.org/istac/).
 
-## 🚀 Instalación
+## ✨ Características
+
+- � **API Directa ISTAC** - Conexión nativa a las 10 APIs del ISTAC
+- 🤖 **LLM Local** - Compatible con LMStudio (Qwen, Llama, Mistral, Command-R)
+- 📊 **Datos actualizados** - Acceso a indicadores, datasets, clasificaciones y operaciones
+- 🔍 **Trazabilidad** - Todas las respuestas incluyen fuente y filtros aplicados
+- 🌐 **Bilingüe** - Español e inglés
+
+## �🚀 Instalación
 
 ```bash
 cd /Users/ajujo/Lab/Proyectos/ISTAC/istac-assistant
@@ -13,16 +21,12 @@ conda activate istac-assistant
 
 # Instalar dependencias
 pip install -r requirements.txt
-
-# Instalar istacpy desde local
-pip install -e ../istacpy-master
 ```
 
 ## 📋 Requisitos
 
 - **Python 3.8+**
 - **LMStudio** ejecutándose en `http://localhost:1234`
-- **istacpy** (proyecto hermano)
 
 ## 🎯 Uso
 
@@ -34,51 +38,47 @@ python -m src.main datasets          # Listar datasets
 python -m src.main chat --lang en    # Chat en inglés
 ```
 
+## 🌐 APIs del ISTAC Soportadas
+
+| API | Descripción | Estado |
+|-----|-------------|--------|
+| Indicadores | Métricas y datos estadísticos | ✅ |
+| Recursos Estadísticos | Cubos de datos/datasets | ✅ |
+| Recursos Estructurales | Clasificaciones (CNAE, territorios) | ✅ |
+| Operaciones Estadísticas | Encuestas, censos | ✅ |
+| Metadatos Comunes | Info organizacional | 🔧 |
+| Georreferenciación | Datos territoriales | 🔧 |
+| Registro SDMX | Formato estándar | 🔧 |
+| Exportaciones | Descargas | 🔧 |
+| Permalinks | Enlaces permanentes | 🔧 |
+| CKAN Catálogo | Catálogo datos abiertos | 🔧 |
+
 ## 🤖 Modelos LLM Recomendados
 
-### Tier 1: Equilibrio calidad/velocidad (7-14B)
 | Modelo | VRAM | Notas |
 |--------|------|-------|
-| **Qwen2.5-14B-Instruct** | ~8GB | ⭐ Mejor en español + tools |
+| **Command-R (35B)** | ~20GB | ⭐ Mejor para tools/RAG |
+| **Qwen2.5-32B** | ~18GB | ⭐ Excelente español |
+| Qwen2.5-14B | ~8GB | Equilibrio calidad/velocidad |
 | Mistral-Nemo-12B | ~7GB | Buen function calling |
-| Llama-3.1-8B-Instruct | ~5GB | Muy probado |
 
-### Tier 2: Mayor calidad (32-70B)
-| Modelo | VRAM | Notas |
-|--------|------|-------|
-| **Qwen2.5-32B-Instruct** | ~18GB | ⭐ Excelente español + tools |
-| Mixtral-8x7B | ~26GB | Buen razonamiento |
-| Llama-3.3-70B | ~40GB | Máxima calidad |
+## 🧪 Preguntas de Prueba
 
-> **Tip**: Para MoE, considera DeepSeek-V2-Lite o Mixtral-8x22B.
-
-## 🧪 Preguntas de Control (Testing)
-
-### Nivel 1: Básico
 ```
+# Nivel 1: Básico
 ¿Qué indicadores hay sobre turismo?
-Dame información del indicador POBLACION
 ¿Cuáles son las temáticas disponibles?
-```
 
-### Nivel 2: Datos con filtros
-```
-¿Cuál es la población de Tenerife en 2024?
-Compara la población de todas las islas en los últimos 5 años
-¿Cuál es la tasa de paro en Canarias?
-```
+# Nivel 2: Datos
+¿Cuál es la población de Canarias en 2025?
+¿Cuál es la tasa de paro?
 
-### Nivel 3: Razonamiento
-```
+# Nivel 3: Razonamiento
 ¿Qué isla tiene más población?
-¿Ha crecido o decrecido la población de Lanzarote?
-```
+¿Ha crecido la población de Lanzarote?
 
-### Nivel 4: Límites (¿respeta políticas?)
-```
-Descarga todos los datos de población desde 2000
-Dame los datos sin fuente
-¿Cuánto mide el Teide?
+# Nivel 4: Límites
+¿Cuánto mide el Teide? → Debe rechazar (no es dato ISTAC)
 ```
 
 ## 📜 Políticas del Sistema
@@ -90,4 +90,3 @@ Dame los datos sin fuente
 ## 📄 Licencia
 
 GPL-3.0 - Instituto Canario de Estadística
-
