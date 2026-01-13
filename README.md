@@ -4,13 +4,14 @@ Asistente inteligente para explorar, consultar y analizar datos estadísticos de
 
 ## ✨ Características
 
-- � **API Directa ISTAC** - Conexión nativa a las 10 APIs del ISTAC
+- 🔗 **API Directa ISTAC** - Conexión nativa a las 10 APIs del ISTAC
 - 🤖 **LLM Local** - Compatible con LMStudio (Qwen, Llama, Mistral, Command-R)
 - 📊 **Datos actualizados** - Acceso a indicadores, datasets, clasificaciones y operaciones
 - 🔍 **Trazabilidad** - Todas las respuestas incluyen fuente y filtros aplicados
+- 🛡️ **Anti-alucinación** - Sistema de validación que bloquea códigos inventados
 - 🌐 **Bilingüe** - Español e inglés
 
-## �🚀 Instalación
+## 🚀 Instalación
 
 ```bash
 cd /Users/ajujo/Lab/Proyectos/ISTAC/istac-assistant
@@ -36,7 +37,43 @@ python -m src.main search "turismo"  # Buscar indicadores
 python -m src.main info POBLACION    # Info de indicador
 python -m src.main datasets          # Listar datasets
 python -m src.main chat --lang en    # Chat en inglés
+python -m src.main chat --debug      # Con trazabilidad de tools
 ```
+
+## 🛡️ Sistema Anti-Alucinación (Bloque A)
+
+El sistema valida **antes y después** de la ejecución para evitar datos inventados:
+
+| Capa | Descripción |
+|------|-------------|
+| **Cache Global** | 259 indicadores reales desde TSV, inmutable |
+| **Normalización** | `POBLACIÓN` → `POBLACION` (quita tildes) |
+| **Validación Pre-Ejecución** | Códigos inventados → bloqueo + sugerencias |
+| **Post-Validación** | Escanea respuestas buscando códigos falsos |
+
+```bash
+# Ejecutar tests de validación
+python tests/test_bloques.py
+```
+
+## 📐 Sistema de Dimensiones (Bloque B)
+
+Distingue entre **indicadores** y **desgloses**:
+
+| Concepto | Ejemplo |
+|----------|---------|
+| Indicador | `POBLACION` (finito, cerrado) |
+| Dimensión | `isla`, `sexo`, `edad` (filtros) |
+
+**Regla clave**: No existe `POBLACION_ISLA`. Existe `POBLACION` con filtro `geo=ISLANDS`.
+
+### Islas reconocidas:
+Tenerife (38), Gran Canaria (35), Lanzarote, Fuerteventura, La Palma, La Gomera, El Hierro, La Graciosa
+
+### Filtros válidos:
+- `geo="ISLANDS"` - Por isla
+- `geo="MUNICIPALITIES"` - Por municipio
+- `geo="38"` - Solo Tenerife
 
 ## 🌐 APIs del ISTAC Soportadas
 
@@ -48,10 +85,6 @@ python -m src.main chat --lang en    # Chat en inglés
 | Operaciones Estadísticas | Encuestas, censos | ✅ |
 | Metadatos Comunes | Info organizacional | 🔧 |
 | Georreferenciación | Datos territoriales | 🔧 |
-| Registro SDMX | Formato estándar | 🔧 |
-| Exportaciones | Descargas | 🔧 |
-| Permalinks | Enlaces permanentes | 🔧 |
-| CKAN Catálogo | Catálogo datos abiertos | 🔧 |
 
 ## 🤖 Modelos LLM Recomendados
 
@@ -65,26 +98,26 @@ python -m src.main chat --lang en    # Chat en inglés
 ## 🧪 Preguntas de Prueba
 
 ```
-# Nivel 1: Básico
-¿Qué indicadores hay sobre turismo?
-¿Cuáles son las temáticas disponibles?
+# Básico - debe usar search_indicators
+"¿Qué indicadores hay sobre población?"
 
-# Nivel 2: Datos
-¿Cuál es la población de Canarias en 2025?
-¿Cuál es la tasa de paro?
+# Desglose - debe explicar que isla es dimensión
+"Dame la población por isla"
 
-# Nivel 3: Razonamiento
-¿Qué isla tiene más población?
-¿Ha crecido la población de Lanzarote?
+# Datos reales - debe devolver datos con trazabilidad
+"¿Cuál es la población de Canarias?"
 
-# Nivel 4: Límites
-¿Cuánto mide el Teide? → Debe rechazar (no es dato ISTAC)
+# Anti-alucinación - NO debe inventar POBLACION_ISLA
+"Dame datos de POBLACION_ISLA"
+→ Error: "El indicador 'POBLACION_ISLA' no existe"
+→ Sugerencia: POBLACION
 ```
 
 ## 📜 Políticas del Sistema
 
 - **Trazabilidad**: Toda respuesta con datos incluye fuente, filtros y periodo
-- **Límites**: El LLM nunca recibe datos crudos masivos
+- **Límites**: Máximo 500 filas, 5000 celdas al LLM
+- **Validación**: Códigos y filtros validados antes de API
 - Configurables en `config/settings.yaml`
 
 ## 📄 Licencia
