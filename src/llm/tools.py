@@ -203,9 +203,11 @@ def get_indicator_data(
     """Obtiene datos de un indicador con trazabilidad.
     
     VALIDA que el código exista antes de consultar la API.
+    VALIDA que los filtros geo sean conocidos.
     APLICA límites de filas para proteger el LLM.
     """
     from ..data.resolver import resolve_indicator
+    from ..data.dimensions import GEO_GRANULARITIES, resolve_island, format_islands_list
     from ..config import get
     
     # Resolver el código (valida + busca alternativas si no existe)
@@ -229,6 +231,37 @@ def get_indicator_data(
             "selection_required": result.needs_selection,
             "instruction": "El usuario debe elegir un número (1-{}) o escribir el código exacto".format(len(candidates)) if candidates else "Usa search_indicators para buscar",
         }
+    
+    # B3: VALIDAR FILTRO GEO
+    # =====================
+    if geo:
+        geo_upper = geo.upper()
+        
+        # Lista de valores geo válidos para la API
+        VALID_GEO_VALUES = {
+            'ISLANDS', 'MUNICIPALITIES', 'COUNTIES', 'PROVINCES', 'REGIONS',
+            'ES70', 'TOTAL', 'ALL',
+        }
+        
+        # También aceptar códigos de isla (38, 35, etc.)
+        is_valid_geo = (
+            geo_upper in VALID_GEO_VALUES or
+            geo_upper in [v.upper() for v in GEO_GRANULARITIES.values()] or
+            resolve_island(geo) is not None or
+            geo.isdigit()  # Código numérico de isla
+        )
+        
+        if not is_valid_geo:
+            return {
+                "error": f"El filtro geo='{geo}' no es válido.",
+                "invalid_filter": geo,
+                "valid_options": {
+                    "granularidad": list(GEO_GRANULARITIES.values()),
+                    "islas": ["Tenerife (38)", "Gran Canaria (35)", "Lanzarote", "..."]
+                },
+                "instruction": "Usa geo='ISLANDS' para ver por isla, o geo='38' para Tenerife",
+                "islands_list": format_islands_list(),
+            }
     
     # Obtener límites de config
     limits = get("limits", {})

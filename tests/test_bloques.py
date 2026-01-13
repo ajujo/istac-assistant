@@ -210,6 +210,28 @@ def test_dimension_values():
     return all_passed, "\n".join(messages)
 
 
+def test_filter_validation():
+    """B3: Bloqueo de filtros inventados en get_indicator_data."""
+    from src.llm.tools import get_indicator_data
+    
+    all_passed = True
+    messages = []
+    
+    # Test filtro inventado - debe ser bloqueado
+    result = get_indicator_data("POBLACION", geo="FAKE_FILTER")
+    blocked = "error" in result and "no es válido" in result.get("error", "")
+    all_passed = all_passed and blocked
+    messages.append(f"FAKE_FILTER bloqueado: {'✅' if blocked else '❌'}")
+    
+    # Test filtro válido - debe pasar
+    result = get_indicator_data("POBLACION", geo="ISLANDS")
+    passed = "error" not in result or "no es válido" not in result.get("error", "")
+    all_passed = all_passed and passed
+    messages.append(f"ISLANDS aceptado: {'✅' if passed else '❌'}")
+    
+    return all_passed, "\n".join(messages)
+
+
 def run_all_tests():
     """Ejecuta todos los tests y muestra resultados."""
     
@@ -226,6 +248,7 @@ def run_all_tests():
         ("B1: Analyze query (dims)", test_analyze_query),
         ("B1b: Resolve query educativo", test_resolve_query),
         ("B2: Valores de dimensión", test_dimension_values),
+        ("B3: Bloqueo filtros inventados", test_filter_validation),
     ]
     
     table = Table(title="Resultados")
