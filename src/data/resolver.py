@@ -278,3 +278,121 @@ def cancel_selection() -> None:
     """Cancela la selección pendiente."""
     global _pending_selection
     _pending_selection = None
+
+
+# =============================================================================
+# B1: RESOLVER INDICADOR BASE VS DESGLOSE
+# =============================================================================
+
+@dataclass
+class QueryResolution:
+    """Resultado de resolución de una consulta completa."""
+    indicator_code: Optional[str]       # Código del indicador base
+    indicator_title: Optional[str]      # Título del indicador
+    dimensions_detected: List[str]      # Dimensiones detectadas
+    has_breakdown: bool                 # Si pidió desglose
+    message: str                        # Mensaje para el usuario
+    needs_clarification: bool = False   # Si necesita elegir indicador
+    candidates: List[IndicatorInfo] = None
+    
+    def __post_init__(self):
+        if self.candidates is None:
+            self.candidates = []
+
+
+def resolve_query(query: str) -> QueryResolution:
+    """Resuelve una consulta separando indicador de dimensiones.
+    
+    Esta es la función clave de B1: detecta si el usuario pide desglose
+    y responde educativamente.
+    
+    Args:
+        query: Consulta del usuario (ej: "población por isla")
+        
+    Returns:
+        QueryResolution con indicador base y dimensiones.
+    """
+    from .dimensions import analyze_query, format_dimensions_message, get_available_dimensions
+    
+    # Analizar query para separar indicador de dimensiones
+    analysis = analyze_query(query)
+    
+    cache = ensure_cache_loaded()
+    
+    # Buscar indicador base (sin dimensiones)
+    indicator_query = analysis.indicator_query
+    
+    # Primero intentar match directo
+    normalized_query = cache.normalize_code(indicator_query.replace(' ', '_'))
+    if cache.is_valid(normalized_query):
+        info = cache.get_info(normalized_query)
+        dimensions = get_available_dimensions(normalized_query)
+        
+        if analysis.has_breakdown:
+            # El usuario pidió desglose - responder educativamente
+            dims_msg = format_dimensions_message(normalized_query, dimensions)
+            return QueryResolution(
+                indicator_code=normalized_query,
+                indicator_title=info.title,
+                dimensions_detected=analysis.dimensions,
+                has_breakdown=True,
+                message=dims_msg
+            )
+        else:
+            return QueryResolution(
+                indicator_code=normalized_query,
+                indicator_title=info.title,
+                dimensions_detected=[],
+                has_breakdown=False,
+                message=f"Indicador encontrado: {info.title}"
+            )
+    
+    # Buscar candidatos
+    candidates = cache.search(indicator_query, limit=10)
+    
+    if not candidates:
+        # Intentar sin espacios
+        candidates = cache.search(indicator_query.replace(' ', ''), limit=10)
+    
+    if not candidates:
+        return QueryResolution(
+            indicator_code=None,
+            indicator_title=None,
+            dimensions_detected=analysis.dimensions,
+            has_breakdown=analysis.has_breakdown,
+            message=f"No se encontraron indicadores para '{indicator_query}'.",
+            needs_clarification=False
+        )
+    
+    # Si hay exactamente 1 candidato y el usuario pidió desglose
+    if len(candidates) == 1 and analysis.has_breakdown:
+        ind = candidates[0]
+        dimensions = get_available_dimensions(ind.code)
+        dims_msg = format_dimensions_message(ind.code, dimensions)
+        
+        # Mensaje educativo
+        dim_names = ', '.join(analysis.dimensions)
+        message = (
+            f"El indicador **{ind.code}** ({ind.title}) no tiene variantes como "
+            f"'{ind.code}_{dim_names.upper()}'.\n\n"
+            f"{dims_msg}"
+        )
+        
+        return QueryResolution(
+            indicator_code=ind.code,
+            indicator_title=ind.title,
+            dimensions_detected=analysis.dimensions,
+            has_breakdown=True,
+            message=message
+        )
+    
+    # Múltiples candidatos - pedir selección
+    return QueryResolution(
+        indicator_code=None,
+        indicator_title=None,
+        dimensions_detected=analysis.dimensions,
+        has_breakdown=analysis.has_breakdown,
+        message=f"Encontrados {len(candidates)} indicadores relacionados con '{indicator_query}'.",
+        needs_clarification=True,
+        candidates=candidates
+    )
