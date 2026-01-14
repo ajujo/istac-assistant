@@ -189,9 +189,9 @@ def test_dimension_values():
     all_passed = True
     messages = []
     
-    # Test islas
+    # Test islas (ahora con códigos ISTAC: ES70X)
     island = resolve_island("Tenerife")
-    passed = island is not None and island.api_code == "38"
+    passed = island is not None and island.api_code == "ES704"
     all_passed = all_passed and passed
     messages.append(f"Tenerife → {island.api_code if island else 'None'} {'✅' if passed else '❌'}")
     

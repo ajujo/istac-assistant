@@ -279,23 +279,46 @@ def suggest_correct_usage(
 # B2: VALORES DE DIMENSIÓN (MVP con listas locales)
 # =============================================================================
 
-# Islas de Canarias con sus códigos
+# Códigos geográficos del ISTAC
+# Formato: ES70 = Canarias, ES70X = Islas
+GEO_CODES = {
+    # Canarias total
+    'ES70': 'Canarias',
+    
+    # Islas (código ISTAC)
+    'ES701': 'Lanzarote',
+    'ES702': 'Fuerteventura', 
+    'ES703': 'Gran Canaria',
+    'ES704': 'Tenerife',
+    'ES705': 'La Gomera',
+    'ES706': 'La Palma',
+    'ES707': 'El Hierro',
+    'ES708': 'La Graciosa',  # A veces incluida en Lanzarote
+}
+
+# Prefijos de municipios por isla (códigos INE)
+MUNICIPIOS_POR_ISLA = {
+    '35': 'Las Palmas (Lanzarote, Fuerteventura, Gran Canaria)',
+    '38': 'Santa Cruz de Tenerife (Tenerife, La Palma, La Gomera, El Hierro)',
+}
+
+# Islas de Canarias con sus códigos (múltiples formatos)
 ISLAS_CANARIAS = {
-    # nombre_normalizado: (nombre_oficial, código_INE)
-    'tenerife': ('Tenerife', '38'),
-    'gran canaria': ('Gran Canaria', '35'),
-    'grancanaria': ('Gran Canaria', '35'),
-    'lanzarote': ('Lanzarote', '35004'),
-    'fuerteventura': ('Fuerteventura', '35006'),
-    'la palma': ('La Palma', '38024'),
-    'lapalma': ('La Palma', '38024'),
-    'la gomera': ('La Gomera', '38012'),
-    'lagomera': ('La Gomera', '38012'),
-    'el hierro': ('El Hierro', '38018'),
-    'elhierro': ('El Hierro', '38018'),
-    'hierro': ('El Hierro', '38018'),
-    'la graciosa': ('La Graciosa', '35004'),
-    'canarias': ('Canarias', 'ES70'),
+    # nombre_normalizado: (nombre_oficial, código_ISTAC, prefijo_municipios)
+    'tenerife': ('Tenerife', 'ES704', '38'),
+    'gran canaria': ('Gran Canaria', 'ES703', '35'),
+    'grancanaria': ('Gran Canaria', 'ES703', '35'),
+    'lanzarote': ('Lanzarote', 'ES701', '35'),
+    'fuerteventura': ('Fuerteventura', 'ES702', '35'),
+    'la palma': ('La Palma', 'ES706', '38'),
+    'lapalma': ('La Palma', 'ES706', '38'),
+    'la gomera': ('La Gomera', 'ES705', '38'),
+    'lagomera': ('La Gomera', 'ES705', '38'),
+    'el hierro': ('El Hierro', 'ES707', '38'),
+    'elhierro': ('El Hierro', 'ES707', '38'),
+    'hierro': ('El Hierro', 'ES707', '38'),
+    'la graciosa': ('La Graciosa', 'ES708', '35'),
+    'canarias': ('Canarias', 'ES70', None),
 }
 
 # Valores de sexo
@@ -334,7 +357,7 @@ class DimensionValue:
 
 
 def resolve_island(text: str) -> Optional[DimensionValue]:
-    """Resuelve un nombre de isla a su código.
+    """Resuelve un nombre de isla a su código ISTAC.
     
     Args:
         text: Nombre de la isla (ej: "Tenerife", "gran canaria")
@@ -345,7 +368,7 @@ def resolve_island(text: str) -> Optional[DimensionValue]:
     text_lower = text.lower().strip()
     
     if text_lower in ISLAS_CANARIAS:
-        name, code = ISLAS_CANARIAS[text_lower]
+        name, code, _ = ISLAS_CANARIAS[text_lower]
         return DimensionValue(
             dimension_type='GEOGRAPHICAL',
             user_input=text,
@@ -355,7 +378,7 @@ def resolve_island(text: str) -> Optional[DimensionValue]:
         )
     
     # Buscar parcial
-    for key, (name, code) in ISLAS_CANARIAS.items():
+    for key, (name, code, _) in ISLAS_CANARIAS.items():
         if text_lower in key or key in text_lower:
             return DimensionValue(
                 dimension_type='GEOGRAPHICAL',
