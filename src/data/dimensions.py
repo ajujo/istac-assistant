@@ -279,45 +279,46 @@ def suggest_correct_usage(
 # B2: VALORES DE DIMENSIÓN (MVP con listas locales)
 # =============================================================================
 
-# Códigos geográficos del ISTAC
+# Códigos geográficos del ISTAC (NUTS-3 estándar Eurostat)
 # Formato: ES70 = Canarias, ES70X = Islas
+# Fuente: https://ec.europa.eu/eurostat/web/nuts/background
 GEO_CODES = {
-    # Canarias total
+    # Canarias total (NUTS-2)
     'ES70': 'Canarias',
     
-    # Islas (código ISTAC)
-    'ES701': 'Lanzarote',
-    'ES702': 'Fuerteventura', 
+    # Islas (NUTS-3) - Códigos oficiales Eurostat
     'ES703': 'Gran Canaria',
-    'ES704': 'Tenerife',
-    'ES705': 'La Gomera',
-    'ES706': 'La Palma',
-    'ES707': 'El Hierro',
-    'ES708': 'La Graciosa',  # A veces incluida en Lanzarote
+    'ES704': 'Fuerteventura',
+    'ES705': 'Lanzarote', 
+    'ES706': 'Tenerife',
+    'ES707': 'La Palma',
+    'ES708': 'La Gomera',
+    'ES709': 'El Hierro',
+    # Nota: La Graciosa no tiene código NUTS-3 propio, está en Lanzarote (ES705)
 }
 
-# Prefijos de municipios por isla (códigos INE)
+# Prefijos de municipios por provincia (códigos INE)
 MUNICIPIOS_POR_ISLA = {
-    '35': 'Las Palmas (Lanzarote, Fuerteventura, Gran Canaria)',
+    '35': 'Las Palmas (Gran Canaria, Fuerteventura, Lanzarote)',
     '38': 'Santa Cruz de Tenerife (Tenerife, La Palma, La Gomera, El Hierro)',
 }
 
 # Islas de Canarias con sus códigos (múltiples formatos)
 ISLAS_CANARIAS = {
-    # nombre_normalizado: (nombre_oficial, código_ISTAC, prefijo_municipios)
-    'tenerife': ('Tenerife', 'ES704', '38'),
+    # nombre_normalizado: (nombre_oficial, código_NUTS3, prefijo_municipios)
+    'tenerife': ('Tenerife', 'ES706', '38'),
     'gran canaria': ('Gran Canaria', 'ES703', '35'),
     'grancanaria': ('Gran Canaria', 'ES703', '35'),
-    'lanzarote': ('Lanzarote', 'ES701', '35'),
-    'fuerteventura': ('Fuerteventura', 'ES702', '35'),
-    'la palma': ('La Palma', 'ES706', '38'),
-    'lapalma': ('La Palma', 'ES706', '38'),
-    'la gomera': ('La Gomera', 'ES705', '38'),
-    'lagomera': ('La Gomera', 'ES705', '38'),
-    'el hierro': ('El Hierro', 'ES707', '38'),
-    'elhierro': ('El Hierro', 'ES707', '38'),
-    'hierro': ('El Hierro', 'ES707', '38'),
-    'la graciosa': ('La Graciosa', 'ES708', '35'),
+    'lanzarote': ('Lanzarote', 'ES705', '35'),
+    'fuerteventura': ('Fuerteventura', 'ES704', '35'),
+    'la palma': ('La Palma', 'ES707', '38'),
+    'lapalma': ('La Palma', 'ES707', '38'),
+    'la gomera': ('La Gomera', 'ES708', '38'),
+    'lagomera': ('La Gomera', 'ES708', '38'),
+    'el hierro': ('El Hierro', 'ES709', '38'),
+    'elhierro': ('El Hierro', 'ES709', '38'),
+    'hierro': ('El Hierro', 'ES709', '38'),
+    'la graciosa': ('La Graciosa', 'ES705', '35'),  # En Lanzarote
     'canarias': ('Canarias', 'ES70', None),
 }
 
