@@ -140,25 +140,47 @@ class IndicatorCache:
     def search(self, query: str, limit: int = 10) -> List[IndicatorInfo]:
         """Busca indicadores por texto en título o código.
         
+        Ordena por relevancia:
+        1. Coincidencia exacta de título (ej: "Población" = "Población")
+        2. Título empieza con la query (ej: "Población." = "población")
+        3. Código empieza con la query normalizada
+        4. Otras coincidencias (título más corto = más general = primero)
+        
         Args:
             query: Texto a buscar
             limit: Máximo de resultados
             
         Returns:
-            Lista de indicadores que coinciden.
+            Lista de indicadores que coinciden, ordenados por relevancia.
         """
-        query_lower = query.lower()
+        query_lower = query.lower().strip()
+        query_upper = query.upper().strip()
         results = []
         
         for info in self._indicators.values():
-            if (query_lower in info.code.lower() or 
-                query_lower in info.title.lower() or
+            title_lower = info.title.lower()
+            code_upper = info.code.upper()
+            
+            if (query_lower in title_lower or 
+                query_lower in code_upper.lower() or
                 query_lower in info.subject.lower()):
-                results.append(info)
-                if len(results) >= limit:
-                    break
+                
+                # Calcular score de relevancia (menor = mejor)
+                if title_lower == query_lower:
+                    score = 0  # Coincidencia exacta de título
+                elif title_lower.startswith(query_lower + ".") or title_lower.startswith(query_lower + " "):
+                    score = 1  # Título empieza con query
+                elif code_upper == query_upper or code_upper.startswith(query_upper):
+                    score = 2  # Código exacto o empieza con query
+                else:
+                    score = 10 + len(info.title)  # Otros, títulos más cortos primero
+                
+                results.append((score, info))
         
-        return results
+        # Ordenar por score
+        results.sort(key=lambda x: x[0])
+        
+        return [info for _, info in results[:limit]]
     
     def all_codes(self) -> List[str]:
         """Devuelve todos los códigos conocidos."""
