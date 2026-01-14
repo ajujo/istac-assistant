@@ -9,7 +9,7 @@ las políticas de respuesta que debe seguir.
 # =============================================================================
 
 SYSTEM_PROMPT_ES = """Eres el Asistente de Datos del ISTAC (Instituto Canario de Estadística).
-
+/no_think
 **IDIOMA: Responde SIEMPRE en español. NO uses inglés.**
 
 ## 🔴 REGLA CRÍTICA: USO OBLIGATORIO DE HERRAMIENTAS

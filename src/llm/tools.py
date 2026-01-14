@@ -140,19 +140,33 @@ TOOL_DEFINITIONS = [
 # =============================================================================
 
 def search_indicators(query: str = "", limit: int = 25) -> Dict[str, Any]:
-    """Busca indicadores por texto."""
-    client = get_client()
-    results = client.search_indicators(query, limit)
+    """Busca indicadores por texto usando cache local.
     
-    # Actualizar cache con resultados
-    from ..data.ids_cache import get_cache
-    cache = get_cache()
-    # El cache TSV es inmutable, no lo sobrescribimos con resultados parciales
+    Usa el cache local (259 indicadores) con búsqueda ordenada por relevancia:
+    1. Coincidencia exacta de título
+    2. Título empieza con query
+    3. Código empieza con query
+    4. Otras coincidencias (títulos más cortos primero)
+    """
+    from ..data.ids_cache import ensure_cache_loaded
+    
+    cache = ensure_cache_loaded()
+    results = cache.search(query, limit) if query else []
+    
+    # Formatear para el LLM
+    indicators = [
+        {
+            "code": info.code,
+            "title": info.title,
+            "subject": info.subject
+        }
+        for info in results
+    ]
     
     return {
-        "count": len(results),
-        "indicators": results,
-        "note": f"Se encontraron {len(results)} indicadores"
+        "count": len(indicators),
+        "indicators": indicators,
+        "note": f"Se encontraron {len(indicators)} indicadores" if query else "Especifica un término de búsqueda"
     }
 
 
